@@ -2,8 +2,9 @@
 TRAC FM 
 ======= 
 
-This is the source code for the TracFM site hosted at http://tracfm.org/ as of April 1st 2013.
+This is the public source code for the TracFM site hosted at http://tracfm.org/
 
+It is licensed under the Affero GPL. Public hosting of this code must be accompanied with the publishing of modified sources.
 
 Getting Started
 -------------------
