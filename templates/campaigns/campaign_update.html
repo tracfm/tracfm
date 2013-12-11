@@ -1,0 +1,31 @@
+{% extends "smartmin/update.html"%}
+
+{% block extra-script %}
+{{ block.super }}
+<script>
+    $(document).ready(function() {
+
+        new nicEditor({ buttonList : [
+            'underline','left','center','right','justify','ol','ul','subscript','superscript','strikethrough','removeformat','indent',
+            'outdent','hr','image','upload','forecolor','link','unlink','fontSize','fontFamily','fontFormat','xhtml'
+        ], iconsPath : '{{STATIC_URL}}/img/nicEditorIcons.gif', fullPanel : false}).panelInstance('id_story');
+    });
+</script>
+{% endblock %}
+
+{% load thumbnail %}
+{% block extra-fields %}
+<div class="control-group">
+  <label class="control-label">Images</label>
+  <div class="controls">
+  {% for image in campaign.sorted_images.all %}
+    {% thumbnail image.image "100x100" crop="center" as im %}
+    <a href="{%url campaigns.campaignimage_update image.pk %}"><img src={{im.url}} width="100" height="100"/></a />
+    {% endthumbnail %}
+  {% endfor %}
+  </div>
+  <div class="controls">
+    <a class="btn small" href="{%url campaigns.campaignimage_create%}?campaign={{campaign.pk}}">Add Image</a>
+  </div>
+</div>
+{% endblock %}

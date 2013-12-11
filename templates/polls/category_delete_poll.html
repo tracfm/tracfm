@@ -1,0 +1,17 @@
+{% extends "smartmin/delete_confirm.html" %}
+
+{% load smartmin %}
+
+{% block delete_form %}
+    <div style="margin-left:30px;margin-top:10px;margin-bottom:10px">
+    <div>
+        <input type="radio" style="float:left" name="responses" value="unknown" checked>
+        <div style="margin-left:25px;">Move responses from this category to the "Unknown" category</div>
+    </div>
+
+    <div style="clear:both;margin-top:5px">
+        <input style="float:left" type="radio" name="responses" value="delete">
+        <div style="margin-left:25px;">Delete all responses in this category</div>
+    </div>
+    </div>
+{% endblock %}

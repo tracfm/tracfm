@@ -1,0 +1,825 @@
+{% extends "smartmin/read.html" %}
+{% load smartmin guardian_tags compress %}
+{% get_obj_perms request.user for poll as "poll_perms" %}
+
+{% block title %}{{ block.super }} - {{ poll.name }}{% endblock %}
+
+{% block extrastyle %}
+<style type="text/css">
+   .clip {
+       margin-top:5px;
+       display:none;
+   }
+
+   .clip_link a {
+       color: #666;
+       text-shadow: 0px 1px 1px rgba(255,255,255,0.5);
+   }
+   .clip_link {
+
+       padding:5px;
+       width:60px;
+       height:15px;
+       background: rgb(198, 199, 200) url(jplayer-black-and-red.png) 0 -210px;
+       -webkit-box-shadow: 0 1px 1px rgba(0,0,0,0.5);
+       -moz-box-shadow: 0 1px 1px rgba(0,0,0,0.5);
+       box-shadow: 0 1px 1px rgba(0,0,0,0.5);
+
+       -webkit-border-radius: 3px;
+       -moz-border-radius: 3px;
+       border-radius: 3px;
+   }
+
+#embed {
+  text-align: left;
+  display: none;
+}
+
+#inner_embed {
+  width: 600px;
+  border-radius: 0px;
+  background-color: #EFEFEF;
+  border: 1px solid #DDD;
+  padding: 8px 10px;
+  margin-bottom: 5px;   
+}
+</style>
+{% endblock %}
+
+{% block extra-script %}
+{{ block.super }}
+
+{% if poll.has_locations %}
+<script src="//maps.google.com/maps/api/js?sensor=false&key=AIzaSyDFLwxEdIzZb6xEWH9qAl7w_X_Hkz0rvNI" type="text/javascript"></script>
+
+{% compress js %}
+<script language="javascript" src="{{ STATIC_URL }}js/maps.google.circleoverlay.js"></script>
+<script language="javascript" src="{{ STATIC_URL }}js/maps.google.infobubble.js"></script>
+<script language="javascript" src="{{ STATIC_URL }}js/maps.js"></script>
+{% endcompress %}
+
+{% endif %}
+
+<script language="javascript" type="text/javascript" src="{{ STATIC_URL }}js/highcharts.js"></script>
+<script>
+var cat_data, car_chart;
+var time_data, time_chart;
+var colors;
+var total_count = {{ poll.count }};
+var unknown_count = {{ poll.unknown_count }};
+
+function tooltip() {
+    updateCounts(this.point.category, this.point.name, this.point.y, this.point.color, this.point.pct, true);
+    return false;
+}
+
+function updateCounts(category, name, value, color, pct, triggerMap){
+
+  $("#cat_value").css("color", color);
+  $("#cat_value").text(value);
+  $("#cat_name").css("color", color);
+  $("#cat_name").text(name);
+
+  $("#cat_percent").text(pct);
+  $("#cat_percent").css("color", color);
+  $(".percent").css("color", color);
+  $(".percent").text("%");
+  $("#chart_roll").stop(true, true).fadeIn(250);
+
+  {% if poll.has_locations %}
+      if (triggerMap) {
+          showMapInfo(category);
+      }
+  {% endif %}
+}
+
+function clearCounts(evt) {
+  $("#chart_roll").stop(true,true).fadeOut(250);
+}
+
+function showCategory(event){
+    {% if not user.is_anonymous %}
+    document.location = event.point.href;
+    {% endif %}
+}
+
+function buildSeries(secondary_id, color) {
+    series = [];
+    for (var i=0; i<cat_data.length; i++) {
+        point = {};
+        point.href = "/p/responses/{{poll.id}}/" + cat_data[i].id + "/";
+
+        if (color) {
+            point.color = color;
+        } else if (cat_data[i].color) {
+            point.color = cat_data[i].color;
+        } else {
+            point.color = colors[series.length % colors.length];
+        }
+
+        if (cat_data[i].name == "Unknown") point.color = "#aaa";
+
+        if (secondary_id != null && cat_data[i].secondary_counts) {
+            point.y = cat_data[i].secondary_counts[secondary_id]['count'];
+            point.pct = cat_data[i].secondary_counts[secondary_id]['pct'];
+            point.name = cat_data[i].name + " - " + cat_data[i].secondary_counts[secondary_id]['name']
+        } else {
+            if (secondary_id) {
+                continue;
+            }
+            point.y = cat_data[i]['count'];
+            point.name = cat_data[i].name;
+            point.pct =  Math.round((point.y * 100 / total_count));
+        }
+
+        series[series.length] = point;
+    }
+
+    return series
+}
+
+// given a JSON version of our page, builds up our cat_data variable and returns
+// it.  It is up to the caller to assign 
+function buildCategoryData(json){
+  var new_cat_data = [];
+  var categories = json.categories;
+  for (i=0; i<categories.length; i++){
+    if (categories[i].count > 0){
+      var category = {};
+      category.id = categories[i].id;
+      category.name = categories[i].name;
+      category.count = categories[i].count;
+      category.secondary_counts = categories[i].secondary_counts;
+
+      category.html = "<div class='category'>";
+      category.html += "<a href='/p/responses/{{poll.id}}/" + categories[i].id + "/'>";
+      category.html += categories[i].name + "</a></div>";
+      category.color = colors[i % colors.length];
+
+      {% if poll.secondary_category_set %}
+
+          category.html += "<div class=summary>" + categories[i].count + " of {{ poll.count }} responses</div>";
+
+          category.color = colors[0];
+          var j=0;
+          var topCat = 0;
+          for (index in json.secondary_categories) {
+
+              var secondary = categories[i].secondary_counts[json.secondary_categories[index].id];
+
+              var cat_color = colors[j++ % colors.length];
+
+              if (secondary.pct > topCat) {
+                  category.color = cat_color;
+                  topCat = secondary.pct;
+              }
+
+              var name = secondary.name;
+              if (name.length > 40) {
+                  name = name.substring(0, 40) + "..";
+              }
+
+              category.html += "<div class='sub_category'><div style='background-color:" + cat_color + "' class='amount'>";
+              category.html += secondary.pct + "%</div><div class='name'>";
+              category.html += name + "</div></div>";
+          }
+
+      {% else %}
+
+          category.html += "<div style=height:5px>&nbsp;</div>";
+
+          var description = "<span style='font-size:26px;'>" + Math.round((categories[i].count / {{ poll.count }}) * 100) + "<small>%</small></span>";
+          category.color = colors[new_cat_data.length % colors.length];
+
+          category.html += "<div class='sub_category'><div style='background-color:" + colors[i % colors.length] + "' class='amount'>";
+          category.html += Math.round((categories[i].count / {{ poll.count }}) * 100) + "%</div><div class='name'>" + categories[i].count + " of {{ poll.count }} responses";
+          category.html += "</div></div>";
+
+      {% endif %}
+
+      if (categories[i].location) {
+          category.latlng = new google.maps.LatLng(categories[i].location.lat, categories[i].location.lng);
+      }
+    
+      category.href = "/p/responses/{{poll.id}}/" + categories[i].id + "/";
+      new_cat_data[new_cat_data.length] = category
+    }
+  }
+ 
+  // sort it by number of items
+  new_cat_data.sort(function(a,b) { return b.count - a.count });
+
+  {% if not poll.demographic %}
+  if (json.unknown_count > 0) {
+    category = {};
+    category.name = "Unknown";
+    category.y = json.unknown_count;
+    category.count = json.unknown_count;
+    category.color = '#aaa';
+    category.id = "_";
+    category.href = "/p/responses/{{poll.id}}/_/";
+    new_cat_data[new_cat_data.length] = category;
+
+  }
+  {% endif %}
+
+  return new_cat_data;
+}
+
+var page_data = {% view_as_json %};
+
+$(".clip_link").live("click", function(){
+    $(".clip").fadeIn();
+    $(this).hide();
+});
+
+$(document).ready(function(){
+
+    {% if poll.audio_file %}
+    $("#jquery_jplayer_1").jPlayer({
+        ready: function () {
+            $(this).jPlayer("setMedia", {
+                mp3:"{{poll.audio_file}}"
+            });
+        },
+        ended: function (event) {
+            /// $(this).jPlayer("play");
+        },
+        swfPath: "/js",
+        supplied: "mp3",
+        wmode: "window"
+
+    });
+    {% endif %}
+
+    colors = Highcharts.getOptions().colors;
+
+    setRecentMessages(page_data);
+
+    // Create mapping data
+    cat_data = buildCategoryData(page_data);
+
+    // set our categories
+    var categories = [];
+    for (i=0; i<cat_data.length; i++){
+       categories[i] = cat_data[i].name;
+    }
+
+    // expand the bar chart when going over 10 categories
+    var height = 380 + (Math.max(0,(cat_data.length - 10)) * 30);
+
+    $("#bar").height(height);
+
+    cat_chart = new Highcharts.Chart({
+         credits: { enabled: false },
+         title: { text: null },
+         chart: {
+            renderTo: 'bar',
+            defaultSeriesType: 'bar'
+         },
+         xAxis: {
+           categories: categories
+         },
+         yAxis: {
+           title: { text: null },
+           allowDecimals: false,
+           min: 0
+         },
+         series: [
+             {% if poll.secondary_category_set%}
+                 {% for sc in poll.secondary_categories.all %}
+                 { name: '{{ sc.name }}', data: buildSeries({{ sc.id }}, colors[{{ forloop.counter0 }}]), events: { click: showCategory , mouseOut: clearCounts} } {% if not forloop.last %},{% endif %}
+                 {% endfor %}
+             {% else %}
+                 { name: 'Total', data: buildSeries(), events: { click: showCategory, mouseOut: clearCounts } }
+             {% endif %}
+         ],
+         plotOptions: {
+           bar: {
+            {% if poll.detailed_chart and not poll.secondary_category_set %}
+              dataLabels: {
+                align: "right",
+                enabled: true,
+                color: "#666666",
+                x: 30,
+                formatter: function() {
+                  return this.point.pct + "%";
+                }
+              },
+            {% endif %}
+              stacking: 'normal',
+           }
+         },
+         tooltip: {
+           formatter: tooltip
+         },
+         {% if poll.secondary_category_set %}
+         legend: {
+           layout: 'horizontal',
+           align: 'center',
+           verticalAlign: 'bottom',
+           floating: false,
+           borderWidth: 1,
+           y: -12,
+           backgroundColor: '#FFFFFF',
+         },
+         {% else %}
+           legend: { enabled: false }
+         {% endif %}
+    });
+    
+
+    if ($("#map_canvas").length > 0) {
+        createOverlayMap(cat_data, {{ poll.unknown_count }});
+        $("#map_canvas").show();
+    }
+});
+
+
+// adjust time zone for EAT (UTC +3)
+var threeHours = 1000*60*60*3;
+
+time_data = [
+{% for entry in poll.response_counts %}
+[ ({{ entry.time  }} + threeHours), {{ entry.value }}] {% if not forloop.last %},{% endif %}
+{% endfor %}
+];
+
+time_chart = new Highcharts.Chart({
+      credits: { enabled: false },
+      chart: {
+         renderTo: 'time_chart',
+         type: 'column'
+      },
+      title: {
+         text: null
+      },
+      legend: { enabled: false },
+      xAxis: {
+         title: {
+            text: null
+         },
+         type: 'datetime',
+         dateTimeLabelFormats: { // don't display the dummy year
+            month: '%e. %b',
+            year: '%b'
+         }
+      },
+      yAxis: {
+         title: {
+            text: null
+         },
+         allowDecimals: false,
+         min: 0
+      },
+      tooltip: {
+         formatter: function() {
+           var label = Highcharts.dateFormat('%b %e %Y, %H:00', this.x) + 
+                     "<br>" + this.y + " response";
+           if (this.y > 1){
+             label += "s";
+           }
+           return label;
+         }
+      },
+      series: [ { data: time_data } ]
+   });
+
+function setTimeData(data){
+  var new_data = [];
+  for (i=0; i<data.length; i++){
+     new_data[new_data.length] = [data[i].time, data[i].value];
+  }
+  time_chart.series[0].setData(new_data, true);
+}
+
+function setCategoryData(json){
+  new_cat_data = buildCategoryData(json);                           
+
+  // see if everything is the same, we'll shortcut out if so
+  if (cat_data.length == new_cat_data.length){
+      var all_same = true;
+      for (i=0; i<cat_data.length; i++){
+        var cat = cat_data[i];
+        var new_cat = new_cat_data[i];
+
+        var location_diff = (cat.location != null && new_cat.location == null) ||
+                            (cat.location == null && new_cat.location != null);
+
+        if (!location_diff && cat.location){
+          location_diff = (cat.location.lat != new_cat.location.lat || cat.location.lng != new_cat.location.lng);
+        }
+
+        if (cat.id != new_cat.id ||
+              cat.name != new_cat.name ||
+              cat.count != new_cat.count ||
+              location_diff){
+          all_same = false;
+          break;
+        }
+
+        if (cat.secondary_counts && new_cat.secondary_counts) {
+            if (cat.secondary_counts.length != new_cat.secondary_counts.length) {
+                all_same = false;
+                break;
+            }
+
+            for (var j=0; j<cat.secondary_counts.length; j++) {
+                var sc = cat.secondary_counts[j];
+                var new_sc = new_cat.secondary_counts[j];
+
+                if (sc.id != new_sc.id || sc.name != new_sc.name || sc.count != new_sc.count) {
+                    all_same = false;
+                    break;
+                }
+            }
+        }
+      }
+      // don't do anything, nothing has changed
+      if (all_same){
+        return;
+      }
+  }
+
+  // assign everything
+  cat_data = new_cat_data;
+
+  categories = [];
+  for (i=0; i<cat_data.length; i++){
+     categories[i] = cat_data[i].name;
+  }
+
+  // set our categories
+  {% if poll.secondary_category_set %}
+      {% for sc in poll.secondary_categories.all %}
+          cat_chart.series[{{ forloop.counter0 }}].setData(buildSeries({{ sc.id }}, colors[{{ forloop.counter0 }}]), true);
+      {% endfor %}
+  {% else %}
+      cat_chart.series[0].setData(buildSeries(), true);
+  {% endif %}
+
+
+  cat_chart.xAxis[0].setCategories(categories, true);
+
+  // update our map
+  updateMap(cat_data, true);
+
+  // set no responses
+  setNoResponses(json);
+
+  setRecentMessages(json);
+}
+
+function setRecentMessages(data) {
+
+    $(".appended_row").remove();
+
+    for (i in data.responses) {
+        var response = data.responses[i];
+
+        if (response) {
+
+            var row = $("#message").clone().removeAttr('style').removeAttr("id");
+            row.attr('class', 'appended_row row' + (i % 2));
+            $(".recent_sent", row).text(response.sent);
+            $(".recent_text", row).text(response.text);
+            $(".recent_category", row).text(response.category);
+            {% if poll.secondary_category_set %}
+            $(".recent_secondary_category", row).text(response.secondary);
+            {% endif %}
+            row.insertBefore("#message");
+        }
+    }
+}
+
+
+function setNoResponses(data){
+  var names = [];
+  for (i in data.categories){
+    if (data.categories[i].count == 0){
+      names[names.length] = data.categories[i].name;
+    }
+  }
+
+  if (names.length > 0){
+    $("#no_response_count").text(names.length);
+    $("#no_responses").text("No responses yet: " + names.join(", "));
+  } else {
+    $("#no_responses").text("");
+  }
+}
+
+function setData(data){
+  total_count = data.count;
+  total_unknown_count = data.unknown_count;
+
+  setTimeData(data.response_counts);
+  setCategoryData(data);
+
+  $("#total_count").text(total_count);
+    {% if not poll.demographic %}
+    $("#unknown_count").text(total_unknown_count);
+    {% endif %}
+}
+
+function refreshData(){
+  // get our new data
+  $.ajax({ url: document.location.href, data: { _format: "json" }, dataType: "json" })
+     .success(function(data, status){
+        setData(data);
+        // schedule our next refresh if this poll is active
+        if (data.active){
+          setTimeout(refreshData, 15000);
+        }
+  });
+}
+
+{% if poll.active %}
+
+// we refresh every 15 seconds
+$(document).ready(function(){
+  setTimeout(refreshData, 15000);
+});
+
+{% endif %}
+
+function showEmpties() {
+    $("#empty_message").hide();
+    $("#empty_category_names").show(250);
+}
+
+function updateEmbedCode(){
+  var width = $("#embed_width").val();
+  {% if poll.has_locations %}
+  var height = $("#bar").height() + 550;
+  {% else %}
+  var height = $("#bar").height() + 150;
+  {% endif %}
+
+  $("#embed_code").val("{% autoescape on %}<iframe src=\"http://www.trac.pro/p/iframe/{{ poll.id }}/?width=" + width + "\" title=\"Poll Results\" frameborder=\"0\" width=\"" + width + "\" height=\"" + height + "\"></iframe>{% endautoescape %}");
+}
+
+$(function(){
+  $("#embed_button").click(function(){
+    updateEmbedCode()
+    $("#embed").toggle("fast");
+  });
+
+  $("#embed_width").change(function(){
+    updateEmbedCode();
+  });
+});
+</script>
+{% endblock %}
+
+{% block pre-content %}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="span12">
+    {% if not poll.demographic %}
+    {% if poll.started and poll.ended %}
+    <div class="well">
+      This poll has completed. It ran from {{ poll.started }} through {{ poll.ended }}
+    </div>
+    {% endif %}
+
+    {% if not poll.started %}
+    <div class="well">
+      This poll hasn't started yet.
+      {% if "poll_update" in poll_perms or perms.polls.poll_update %}
+      <a href="{% url poll_start poll.id %}" class="btn btn-primary">Start</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  
+    {% if poll.started and not poll.ended %}
+    <div class="well">
+      This poll is open and has been running since {{ poll.started }}
+        {% if "poll_update" in poll_perms or perms.polls.poll_update %}
+        <a style="margin-left:20px" href="{% url poll_stop poll.id %}" class="btn btn-primary">End Poll</a>
+        {% endif %}
+    </div>
+    {% endif %}
+{% endif %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="span8">
+    <div id="embed" style="display:none" class="well">
+      <div id="inner_embed">
+        <div>Enter desired IFRAME width <input id="embed_width" type="text" value="500" style="text-align: right;width:50px;margin-top:5px;" size=4>px</div>
+        <div style="padding-top: 5px"><textarea cols=80 rows=8 id="embed_code" style="width:95%"></textarea></div>
+      </div>
+    </div>
+    <div class="poll_info">
+      <h2>{{  poll.name }}</h2>
+      {% if poll.campaigns.count == 1 %}
+      {% for campaign in poll.campaigns.all %}
+      This poll is part of the <a href="{%url campaigns.campaign_read campaign.pk%}">{{campaign.name}}</a> campaign.
+      {% endfor %}
+      {%endif%}
+      <p>{{ poll.description|safe }}</p>
+
+      <!-- begin audio -->
+      {% if poll.audio_file %}
+      <div class="clip_link"><a style="float:left;margin-right:5px;" href="javascript:void(0);">Listen</a><img src="{{STATIC_URL}}/img/sound.png"></div>
+      <div class="clip">
+        <div id="jquery_jplayer_1" class="jp-jplayer"></div>
+        <div class="jp-audio-container">
+          <div class="jp-audio">
+            <div class="jp-type-single">
+              <div id="jp_interface_1" class="jp-interface">
+                <ul class="jp-controls">
+                  <li><a href="#" class="jp-play" tabindex="1">play</a></li>
+                  <li><a href="#" class="jp-pause" tabindex="1">pause</a></li>
+                  <li><a href="#" class="jp-mute" tabindex="1">mute</a></li>
+                  <li><a href="#" class="jp-unmute" tabindex="1">unmute</a></li>
+                </ul>
+                <div class="jp-progress-container">
+                  <div class="jp-progress">
+                    <div class="jp-seek-bar">
+                      <div class="jp-play-bar"></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="jp-volume-bar-container">
+                  <div class="jp-volume-bar">
+                    <div class="jp-volume-bar-value"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      <!-- end audio -->
+    </div>
+  </div>
+  <div class="span4">
+    <div style="margin-bottom: 30px;text-align:right;">
+        {% if "poll_update" in poll_perms or perms.polls.poll_update %}
+      <a class="btn" href="{% url poll_edit poll.id %}">Edit</a>
+        {% endif %}
+        {% if perms.polls.poll_iframe %}
+      <a class="btn" id="embed_button" href="#">Embed</a>
+        {% endif %}
+    </div>
+    {% include "share.html" %}
+    <table cellspacing=0 class="pull-right">
+      <tr>
+        <td class="giant_nums">
+          <span class="giant">
+            {% if "poll_update" in poll_perms or perms.polls.poll_update %}
+            <a id="total_count" href="{% url responses_for_poll poll.id  %}">
+            {{ poll.count }}
+            </a>
+               {% else %}
+               {{ poll.count }}
+               {% endif %}
+          </span>
+          <br/>
+          <span class="count_label">responses</span>
+        </td>
+        <td class="giant_nums">
+            {% if not poll.demographic %}
+          <span class="giant">
+              {% if "poll_update" in poll_perms or perms.polls.poll_update %}
+            <a id="unknown_count" href="{% url responses_for_poll poll.id  '_' %}">
+              {{ poll.unknown_count }}
+            </a>
+              {% else %}
+              {{ poll.unknown_count }}
+              {% endif %}
+          </span>
+          <br/>
+          <span class="count_label">unknown</span>
+            {% endif %}
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+{% if poll.started or poll.demographic %}
+<div class="row">
+  <div class="span8">
+    <div id="bar">  
+    </div>
+  </div>
+  <div class="span4">
+    <div id="chart_side">
+      <div id="time_chart">
+      </div>
+      <div id="chart_roll">
+        <div class="giant" id="cat_value">
+        </div>
+        <div class="count_label" id="cat_name"></div>
+        <div class="giant">
+          <span id="cat_percent"></span><span class="percent"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="span8">
+    <div id="no_responses_sectuib" class="location_rules">
+    {% if poll.category_set.get_empty_categories.count > 0 %}
+    {% if poll.category_set.get_empty_categories.count > 10 %}
+      <div id="empty_message">No responses yet for <a href="javascript:showEmpties();"><span id="no_response_count">{{ poll.category_set.get_empty_categories.count }}</span> categories</a>.</div>
+      <div id="empty_category_names" style="display:none">
+    {% else %}
+        <div id="empty_message"></div>
+        <div id="empty_category_names">
+    {% endif %}
+          <div id="no_responses">No responses for: 
+            {% for category in poll.category_set.get_empty_categories %}
+                {% if category.count == 0 and category.name %}{{ category.name }}{% if not forloop.last %}, {% endif %}{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+    {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="span12">
+    {% if poll.has_locations %}
+      <div id="map_canvas"></div>
+    {% endif %}
+    </div>
+  </div>
+{% endif %}
+  
+  <div class="row" style="margin-top: 15px;">
+    <div class="span12">
+    <div class="page-header">
+      <div class="pull-right" style="margin-top:0px">
+{% if "poll_recent" in poll_perms or perms.polls.poll_recent %}
+        <a class="btn btn-primary btn-small" href="{% url poll_catset_view poll.category_set.id %}">Categories</a>
+              {% if poll.secondary_category_set %}
+        <a class="btn btn-small" href="{% url poll_catset_view poll.secondary_category_set.id %}">Secondary Categories</a>
+              {% endif %}
+      </div>
+      {% if not poll.demographic %}
+      <h2>Recent Messages</h2>
+      {% else %}
+      <h2>Demographic Poll</h2>
+      {% endif %}
+    </div>
+    </div>
+  </div>
+
+    {% if not poll.demographic %}
+    {% if "poll_recent" in poll_perms or perms.polls.poll_recent %}
+  <table class="table table-condensed table-striped" id="recent_messages">
+    
+    <thead>
+      <tr>
+        <th class="header_sent">Sent</th>
+        <th class="header_text">Messsage</th>
+        <th class="header_category" nowrap="true">Category</th>
+      {% if poll.secondary_category_set %}
+        <th class="header_secondary" nowrap="true">Secondary Category</th>
+      {% endif %}
+      </tr>
+    </thead>
+    
+    <tr class="recent_message" id="message" style="display:none">
+      <td class="recent_sent" nowrap="true"></td>
+      <td class="recent_text" width="100%"></td>
+      <td class="recent_category" nowrap="true" ></td>
+    {% if poll.secondary_category_set %}
+      <td class="recent_secondary_category" nowrap="true"></td>
+    {% endif %}
+    </tr>
+  </table>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra-style %}
+<style>
+h2 {
+  line-height: 100%;
+  height: 100%;
+}
+
+.header_text {
+  width: 70%;
+}
+
+.header_category {
+  width: 20%;
+}
+</style>
+{% endblock %}
+

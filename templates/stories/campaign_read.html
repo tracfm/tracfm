@@ -1,0 +1,24 @@
+{% extends "stories/read.html" %}
+
+{% block extra-story %}
+{% if story.polls.all|length > 0 %}
+<div id="story_footer" class="well">
+  <h5 class="poll_note">Polls part of this campaign:</h5>
+  {% for poll in story.polls.all %}
+  <div class="poll_note">
+    <div class="poll_name">
+            {% if poll.is_public %}
+      <a href="{%url poll_view poll.id%}">{{poll.name}}</a>
+            {% else %}
+            {{poll.name}}
+            {% endif %}
+    </div>
+    {% if poll.audio_file %}
+    <img src="{{STATIC_URL}}/img/sound.png"/>
+    {%endif%}
+    <br clear="both"/>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

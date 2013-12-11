@@ -1,0 +1,19 @@
+{% load quickblocks %}
+
+{% include "menu.html" %}
+
+{% include "share.html" %}
+
+{% load_qbs "sidebar" tag %}
+{% for item in sidebar %}
+<div class="sidebar_story">
+  {% if item.link %}<a href="{{ item.link }}">{% endif %}
+  <h1 class="tall">{{ item.title }}</h1>{% if item.link %}</a>{% endif %}
+  <p>{{ item.content|safe}}</p>
+</div>
+{% endfor %}
+
+{% load_qbs "extra" tag %}
+{% for item in extra %}
+{{ item.content|safe }}
+{% endfor %}

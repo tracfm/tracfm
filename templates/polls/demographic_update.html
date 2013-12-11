@@ -1,0 +1,28 @@
+{% extends "smartmin/list_update.html" %}
+
+{% block extra-fields %}
+    {% for question in questions %}
+    <tr>
+        <td>{{question.question}}</td>
+        <td><input name="question_{{question.id}}" value="{{question.response.response}}"></input></td>
+    </tr>
+    {% endfor %}
+{% endblock %}
+
+{% block extra-style %}
+<style>
+select {
+  margin-bottom: 0px;
+  line-height: 100%;
+  height: 100%;
+  width: 300px;
+}
+
+input {
+  margin-bottom: 0px;
+  line-height: 100%;
+  height: 100%;
+  width: 300px;
+}
+</style>
+{% endblock %}

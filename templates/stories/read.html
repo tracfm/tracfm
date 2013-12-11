@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% load thumbnail %}
+
+{% block title %}{{ block.super }} - {{ story.title }}{% endblock %}
+
+{% block pre-content %}
+{% endblock %}
+
+{% block content %}
+<div class="row" id="story-header" style="background:{{story.color|default:"#333"}}">
+    <div class="span5" style="background:{{story.color|default:"#333"}}">
+      <div class="story-info">
+        <h1>{{ story.title }}</h1>
+        {{ story.summary|safe }}
+      </div>
+    </div>
+    <div class="span7 story-image">
+    {% thumbnail story.image "630x350" crop="100%" as im %}
+      <img class="feature-img" src="{{ im.url }}" height="350" width="630">
+    {% endthumbnail %}
+    </div>
+</div>
+
+<div class="row" style="margin-top: 10px">
+  <div class="span8">
+
+    <div id="story">
+      {% if story.video_id %}
+      <iframe class="youtube" src="http://www.youtube.com/embed/{{story.video_id}}?wmode=transparent" frameborder="0" allowfullscreen></iframe>
+      {% endif %}
+      {{story.content|safe}}
+    </div>
+    
+    <div class="clearfix"></div>
+
+    {% block extra-story %}
+    {% endblock %}
+  </div>
+
+  {% block sidebar %}
+  <div class="span4">
+    {% if perms.django_quickblocks.quickblock_update %}
+    <div class="thumbbox">
+        <a href="{% url django_quickblocks.quickblock_update story.id %}" class="btn btn-block">Edit</a>
+    </div>
+    {% endif %}
+    {% include "menu.html" %}
+    {% include "share.html" %}
+
+    {% if story.sorted_images|length > 0 %}
+    <div id="sidebar" class="well">
+      {% for image in story.sorted_images %}
+      {% thumbnail image.image "250x200" crop="center" as im %}
+      <div class="thumbbox">
+        {% thumbnail image.image "800" crop="center" as big %}
+        <a data-toggle="lightbox" href="#big_{{image.id}}"><img src={{im.url}} width="250" height="200"/></a>
+
+        <div id="big_{{image.id}}" class="lightbox hide fade"  tabindex="-1" role="dialog" aria-hidden="true" style="display:none">
+	  <div class='lightbox-header'>
+	    <button type="button" class="close" data-dismiss="lightbox" aria-hidden="true">&times;</button>
+	  </div>
+	  <div class='lightbox-content'>
+	    <img src="{{big.url}}">
+	  </div>
+        </div>
+
+        {% endthumbnail %}
+        {% endthumbnail %}
+        <div class=caption>{{image.caption}}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    </div>
+    {% endblock %}
+</div>
+{% endblock %}
+
+
+{% block extra-style %}
+<style>
+#story_footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.story-image {
+  width: 560px;
+}
+
+#story-header {
+  margin-top: -10px;
+  margin-left: -20px;
+  margin-right: -20px;
+}
+
+@media (max-width: 767px) {
+  .story-image {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  #story-header {
+    height: auto;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 979px) {
+  #story-header {
+    height: 241px;
+  }
+
+  .story-image {
+    width: 434px;
+  }
+}
+
+@media (min-width: 1200px) {
+  #story-header {
+    height: 311px;
+  }
+
+  .story-image {
+    width: 560px;
+  }
+}
+
+.story-info {
+  padding-top: 25px;
+  padding-bottom: 0px;
+  line-height: 140%;
+}
+
+.story-info h2 {
+  line-height: 100%;
+}
+</style>
+<link rel="stylesheet" href="{{ STATIC_URL }}css/bootstrap-lightbox.css">
+{% endblock %}
+
+{% block extra-script %}
+{{ block.super }}
+<script src="{{ STATIC_URL }}js/bootstrap-lightbox.js"></script>
+{% endblock %}
+

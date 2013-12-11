@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% load smartmin %}
+{% load util %}
+
+{% block extrastyle %}
+<style>
+    .option {
+        margin-bottom:10px;
+    }
+</style>
+{% endblock %}
+
+
+
+{% block content %}
+
+{% if perms.polls.tracsettings_update %}
+<div class="option">
+    <a href="{% url settings %}">Default Messages</a><br/>
+    Set the system wide messages used for active users or duplicate messages.
+</div>
+{% endif %}
+
+{% if perms.django_quickblocks.quickblock_list %}
+<div class="option">
+    <a class="{% active request "/qbs" %}" href="{% url django_quickblocks.quickblock_list %}">Content</a><br/>
+    Add stories to the content pages or customize the sidebar content.
+</div>
+{% endif %}
+
+{% if perms.auth.user_list %}
+<div class="option">
+<a class="{% active request "/users" %}" href="{% url users.user_list %}">Users</a><br/>
+Configure the users who can login to the system.
+</div>
+{% endif %}
+
+{% if perms.polls.demographicquestion_list %}
+<div class="option">
+    <a href="{% url polls.demographicquestion_list %}">Demographic Questions</a><br/>
+    Questions to be asked in the call center where answers are unique, such as first name, national id, etc.
+</div>
+{% endif %}
+
+{% if perms.polls.poll_list %}
+<div class="option">
+    <a href="{% url poll_demo_list %}">Demographic Polls</a><br/>
+    Categories for manually entered demographics
+</div>
+{% endif %}
+
+
+
+{% endblock %}

@@ -1,0 +1,147 @@
+<script language="javascript" src="{{ STATIC_URL }}js/locations.js"></script>
+
+<script language="javascript">
+
+    function activatePJAXLinks() {
+       $('a[data-pjax]').click(function(evt) {
+           pjaxify(evt, this.href, function() {
+               // hide the markers and only show our clicker marker
+               // hideMarkers();
+               var lat = $("#id_latitude").attr("value");
+               var lng = $("#id_longitude").attr("value");
+               if (lat && lng) {
+                   hideMarkers(new google.maps.LatLng(lat, lng));
+               }
+           });
+       });
+
+        
+       $('.paginator ul a').click(function(evt) {
+           pjaxify(evt, this.href);
+       });
+    }
+
+    function pjaxify(evt, link, afterRender) {
+
+        evt.preventDefault();
+        evt.stopPropagation();
+
+        $.pjax({
+            url: link,
+            data: { 'pjax': "true" },
+            container: '#bottom',
+            push: true,
+            replace: false,
+            success: function() {
+                hijackForms();
+                activatePJAXLinks();
+
+                if (afterRender()) {
+                    afterRender();
+                }
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        hijackForms();
+        activatePJAXLinks();
+    });
+
+    var categories = [];
+
+    function editCategory(id) {
+        console.log("{{ base_url }}")
+        $.pjax({
+            url: "{{ base_url }}" + id + "/",
+            data: { 'pjax': "true" },
+            container: '#bottom',
+            push: true,
+            replace: true,
+            success: function() {
+                hijackForms();
+                activatePJAXLinks();
+            },
+            error: function(){}
+        });
+    }
+
+    function mapReady() {
+        categories = [{% for category in pollcategoryset.categories.all %}
+        {% if category.latitude and category.longitude %}
+            {
+                "name" : "{{ category.name|safe }}",
+                "location" : new google.maps.LatLng({{category.location}}),
+                // "click": function() { editCategory({{ category.id }})}
+            },
+        {% endif %}
+        {% endfor %}];
+
+        if (categories.length > 0) {
+            openMap(false);
+        }
+    }
+    
+    function openMap(animate) {
+        $("#open_map_button").hide();
+        var callback = function() {
+            map = showMap("map_canvas", categories);
+            registerForClicks(map, "#id_latitude", "#id_longitude", function(marker) {
+                $("#id_name").focus();
+            });
+        };
+
+        if (animate) {
+            $("#map_canvas").show('fast', callback);
+        } else {
+            $("#map_canvas").show();
+            callback();
+        }
+
+    }
+
+    function showAdd() {
+        $.pjax({
+            url: "create/",
+            data: { 'pjax': "true" },
+            container: '#bottom',
+            success: function() {
+                hijackForms();
+                $("#id_name").focus();
+            }
+        });
+    }
+
+    function submit(form, data) {
+        $.pjax({
+             url: document.location.href,
+             type: 'POST',
+             data: data + "&pjax=true;loc={{ base_url }}",
+             container: '#bottom',
+             success: function(args) {
+                 activatePJAXLinks();
+                 hijackForms();
+                 var inputs = form.serializeArray();
+                 var location = new google.maps.LatLng(inputs[1].value, inputs[2].value);
+                 addMarker(map, location, inputs[0].value);
+                 showMarkers();
+             }
+        });
+    }
+
+    function hijackForms() {
+        // attach a submit handler to the form
+        $("#smartmin_form").submit(function(event) {
+
+            // stop form from submitting normally
+            event.preventDefault();
+            event.stopPropagation();
+
+            // get some values from elements on the page:
+            var form = $(this);
+            var data = form.serialize();
+            submit(form, data);
+        });
+    }
+
+</script>

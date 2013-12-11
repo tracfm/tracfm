@@ -1,0 +1,69 @@
+{% extends "smartmin/list.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+#message_tester {
+  padding: 5px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  background: #e1e1e1 url({{STATIC_URL}}img/smartmin/nav-bg.gif) top left repeat-x;
+  color: #666;
+
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+  -khtml-border-radius: 5px;
+  border-radius: 5px;
+}
+
+#message_tester input.sender {
+  width: 100px;
+}
+#message_tester input.text {
+  width: 350px;
+}
+
+#message_tester label {
+  font-weight: bold;
+}
+
+</style>
+{% endblock %}
+
+{% load smartmin %}
+
+{% block post-content %}
+{{ block.super }}
+{% if perms.rapidsms_httprouter.message_send %}
+<div id="message_tester">
+  <label>Message Tester</label>
+  <form method="POST" action="{% url messages_send %}">
+  <table>
+    </tr>
+    <td>
+    <input type="text" name="sender" class="sender" size=15 value="2065551212"></input>
+    <input type="text" name="text" class="text" size=80></input>
+    <input type="hidden" name="backend" value="console" >
+    {% csrf_token %}
+    </td>
+    <td>
+    &nbsp;<input class="button small" type="submit" value="Send">
+    </td>
+    <td class="errors">
+      {% if form and form.errors %}
+      <ul class="errorlist">
+      {% for key, errors in form.errors.items %}
+      {% for error in errors %}
+      <li>{{ error }}</li>
+      {% endfor %}
+      {% endfor %}
+      </ul>
+      {% endif %}
+    </td>
+    </tr>
+  </table>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

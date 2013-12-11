@@ -1,0 +1,108 @@
+{% extends "stories/tracfm_list.html" %}
+
+{% load thumbnail quickblocks %}
+
+{% block content %}
+{% load_qbs "banner" %}
+<div id="slides" class="flexslider">
+  <ul class="slides">
+    {% for b in banner %}
+    {% thumbnail b.image "630x350" crop="100%" as im %}
+    <li class="slide" data-id="{{ b.id }}">
+      <div class="box">
+        {% if b.link %}<a href="{{ b.link }}">{% endif %}<img class="feature-img" width="630" height="350" src="{{ im.url }}">{% if b.link %}</a>{% endif %}
+        <div class="feature-info" style="background:{{b.color|default:"#333"}}">
+          <div class="blurb">
+            {% if b.link %}<a href="{{ b.link }}">{% endif %}
+            <h1>{{ b.summary }}</h1>
+            {{ b.content|safe }}
+            {% if b.link %}</a>{% endif %}
+          </div>
+        </div>
+      </div>
+    </li>
+    {% endthumbnail %}
+    {% endfor %}
+  </ul>
+</div>
+
+<div id="thumbnails" class="flexslider">
+  <ol class="slides">
+    {% for b in banner %}
+    {% thumbnail b.image "200x111" crop="100%" as im %}
+    <li>
+      <div class="indicator"></div>
+      <div class="thumbnail">
+        <img class="thumb-img" src="{{im.url}}" width="200" height="111">
+        <div class="thumb-label">{{ b.title }}</div>
+      </div>
+    </li>
+    {% endthumbnail %}
+    {% endfor %}
+  </ol>
+</div>
+
+{{ block.super }}
+{% endblock %}
+
+{% block extra-style%}
+{{ block.super }}
+<style>
+.content .row {
+  margin-top: 30px;
+}
+.preview_image {
+  float:left
+}
+.campaign {
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+.campaign_name {
+  margin-left:115px;
+  margin-bottom:5px;
+  color: #333;
+}
+.campaign_name a {
+  color: #333;
+}
+.campaign_description {
+  margin-left:115px;
+  color: #666;
+}
+</style>
+{% endblock %}
+        
+{% block extra-script %}
+<script type="text/javascript" charset="utf-8">
+  var thumbslider;
+
+  $(function() {
+    $('#slides').flexslider({
+      animation: "slide",
+      controlNav: true,
+      before: function(slider){
+        var current = slider.currentSlide;
+        var goingTo = slider.animatingTo;
+        if (slider.count > 4){
+          thumbslider.flexAnimate(goingTo);
+        }
+        $(thumbslider.slides[current]).removeClass("flex-active-slide");
+        $(thumbslider.slides[goingTo]).addClass("flex-active-slide");
+      }
+    });
+
+    $('#thumbnails').flexslider({
+      animation: "slide",
+      slideshow: false,
+      controlNav: false,
+      directionNav: true,
+      animationLoop: false,
+      itemWidth: 200,
+      asNavFor: '#slides',
+      start: function(slider){ thumbslider = slider; }
+    });
+});
+</script>
+{% endblock %}

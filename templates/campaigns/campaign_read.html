@@ -1,0 +1,147 @@
+{% extends "smartmin/read.html" %}
+
+{% load thumbnail %}
+
+{% block pre-content %}
+{% endblock %}
+
+{% block content %}
+<div class="row" id="campaign-header" style="background:{{campaign.background}}">
+    <div class="span5" style="background:{{campaign.background}}">
+      <div class="campaign-info">
+        <h2>{{ campaign.name }}</h1>
+        {{ campaign.description }}
+      </div>
+    </div>
+    <div class="span7 campaign-image">
+    {% thumbnail campaign.feature_image.image "630x350" crop="100%" as im %}
+      <img class="feature-img" src="{{ im.url }}">
+    {% endthumbnail %}
+    </div>
+</div>
+
+<div class="row" style="margin-top: 10px">
+  <div class="span8">
+    
+
+    <div id="story">
+      {% if campaign.video_link%}
+      <iframe class="youtube" src="http://www.youtube.com/embed/{{campaign.video_link}}?wmode=transparent" frameborder="0" allowfullscreen></iframe>
+      {% endif %}
+      {{campaign.story|safe}}
+    </div>
+
+
+    <div class="clearfix"></div>
+
+   {% if campaign.polls|length > 0 %}
+   <div id="story_footer" class="well">
+     <h5 class="poll_note">Polls part of this campaign:</h5>
+    {% for poll in campaign.polls.all %}
+
+    <div class="poll_note">
+        <div class="poll_name">
+            {% if poll.is_public %}
+            <a href="{%url poll_view poll.id%}">{{poll.name}}</a>
+            {% else %}
+            {{poll.name}}
+            {% endif %}
+        </div>
+        {% if poll.audio_file %}
+        <img src="{{STATIC_URL}}/img/sound.png"/>
+        {%endif%}
+        <br clear="both"/>
+    </div>
+    {% endfor %}
+   </div>
+   {% endif %}
+  </div>
+
+  {% if campaign.images.all|length > 1 or perms.campaigns.campaignimage_create%}
+  <div class="span4">
+    {% if perms.campaigns.campaign_update %}
+    <div class="thumbbox">
+        <a href="{% url campaigns.campaign_update campaign.pk %}" class="btn btn-block">Edit Campaign</a>
+    </div>
+    {% endif %}
+
+    {% include "share.html" %}
+
+    <div id="sidebar" class="well">
+    {% for image in campaign.sorted_images %}
+    {% if not forloop.first %}
+    {% thumbnail image.image "250x200" crop="center" as im %}
+
+      <div class="thumbbox">
+      {% thumbnail image.image "800" crop="center" as big %}
+      <a href="{{big.url}}" title="{{image.caption}}" rel="lightbox-cats"><img src={{im.url}} width="250" height="200"/></a>
+      {% endthumbnail %}
+
+      <div class=caption>{{image.caption}}</div>
+    </div>
+    {% endthumbnail %}
+    {% endif %}
+    {% endfor %}
+
+    </div>
+    </div>
+    {%endif%}
+
+</div>
+
+{% endblock %}
+
+
+{% block extra-style %}
+<style>
+#story_footer {
+  margin-top: 10px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.campaign-image {
+  width: 560px;
+}
+
+#campaign-header {
+  margin-top: -10px;
+  margin-left: -20px;
+  margin-right: -20px;
+}
+
+@media (max-width: 767px) {
+  .campaign-image {
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 979px) {
+  .campaign-image {
+    width: 434px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .campaign-image {
+    width: 560px;
+  }
+}
+
+.campaign-info {
+  padding-top: 25px;
+  padding-bottom: 0px;
+  line-height: 140%;
+}
+
+.campaign-info h2 {
+  line-height: 100%;
+}
+</style>
+{% endblock %}
+
+{% block extra-script %}
+{{ block.super }}
+{% endblock %}

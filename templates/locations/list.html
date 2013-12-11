@@ -1,0 +1,144 @@
+{% extends "smartmin/list.html" %}
+
+{% block pre-content %}
+<div id="map_canvas">
+</div>
+<div id="map_bottom">
+  <div id="location_form">
+
+      <form action="{% url add_location areatype.id %}" method="POST">
+
+           {% csrf_token %}
+          {{ form }}
+          <input type="submit" class="small button" value="Add" id="add_button"></input>
+      </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extrascript %}
+{{ block.super }}
+<script src="//maps.google.com/maps/api/js?sensor=false&key=ABQIAAAAz_hydOFL-ct1eDo6FziXlhT2yXp_ZAY8_ufC3CFXhHIE1NvwkxRIHu0UwnO3aOScYoo-EKLi558qkw" type="text/javascript"></script>
+</script>
+<script type="text/javascript">
+  var map;
+  var latitude;
+  var longitude;
+  var marker;
+  var geocder;
+  var markers = []
+
+  function addMarker(map, loc, name) {
+      markers[markers.length] = new google.maps.Marker({
+                  position: loc,
+                  map: map,
+                  title:name
+      });
+  }
+
+  function initialize() {
+
+      geocoder = new google.maps.Geocoder();
+
+      var latlng = new google.maps.LatLng(0.3103623222234959,32.57171667578132);
+      var loc_set = false;
+
+      var myOptions = {
+          zoom: 13,
+          center: latlng,
+          scrollwheel: false,
+          disableDoubleClickZoom: true,
+          mapTypeId: google.maps.MapTypeId.ROADMAP
+      };
+  
+      var map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+      if (loc_set) { 
+          marker = new google.maps.Marker({
+                      position: latlng,
+                      map: map
+          });
+      }
+
+      {% for location in object_list %}
+      addMarker(map, new google.maps.LatLng({{ location.location.latitude }}, {{ location.location.longitude }}), "{{ location.name }}");
+      {% endfor %}
+      google.maps.event.addListener(map, 'dblclick', function(event) {
+          if (marker) {
+              marker.setMap(null);
+          }
+
+          if (event.latLng) {
+              $("#id_latitude").val(event.latLng.lat());
+              $("#id_longitude").val(event.latLng.lng());
+          }
+
+          reverse_geocode(event.latLng, function(geo) {
+              marker = new google.maps.Marker({
+              position: event.latLng,
+              map: map
+                  });
+
+              if (geo.province) {
+              $("#id_province option").each(function() {
+                  if ($(this).text().indexOf(geo.province) == 0) {
+                  $(this).attr('selected', 'selected');
+                  } else {
+                  $(this).attr('selected', false);
+                  }
+              });
+              }
+
+              if (geo.neighborhood) {
+              var name = geo.neighborhood;
+              if (geo.city) {
+                  name += ", " + geo.city;
+              }
+              setName(name);
+              }
+              else if (geo.city) {
+                  setName(geo.city);
+              }
+          });
+      });
+  }
+
+  function setName(name) {
+  }
+
+  function reverse_geocode(latlng, process_points) {
+    geocoder.geocode({'latLng': latlng}, function(results, status) {
+      if (status == google.maps.GeocoderStatus.OK) {
+
+	  var geo = {};
+
+	  for (var i=0; i<results.length; i++) {
+              // we are looking at a province
+	      if (results[i].types[0] == "administrative_area_level_1") {
+		  geo['province'] = results[i].address_components[0].short_name;
+	      }
+	      // looking at a city
+	      else if (results[i].types[0] == "administrative_area_level_2") {
+		  geo['city'] = results[i].address_components[0].long_name;
+	      }
+	      
+	      else if (results[i].types[0] == "sublocality") {
+		  geo['neighborhood'] = results[i].address_components[0].long_name;	     
+	      }
+	  }
+
+	  process_points(geo);
+
+      } else {
+        // alert("Geocoder failed due to: " + status);
+      }
+    });
+  }
+</script>
+<script>
+ $(document).ready(function(){
+   initialize();
+ });
+ 
+</script>
+{% endblock %}

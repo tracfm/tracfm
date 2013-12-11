@@ -1,0 +1,52 @@
+{% if not request.user.is_anonymous %}
+<div class="navbar">
+  <div class="navbar-inner">
+    <div class="container">
+      <a class="brand" href="{% url users.user_profile request.user.id %}">{{ request.user.username }}</a>
+      <ul class="nav pull-right">
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            {% if perms.polls.pollcategoryset_list %}
+            <li><a href="{% url catsets_list %}">Templates</a></li>
+            {% endif %}
+            {% if perms.polls.respondent_list %}
+            <li><a href="{% url respondents %}">Respondents</a></li>
+            {% endif %}
+            {% if perms.polls.tracsettings_list %}
+            <li><a href="{% url polls.tracsettings_list %}">Default Responses</a></li>
+            {% endif %}
+            {% if perms.polls.demographicquestion_list %}
+            <li><a href="{% url polls.demographicquestion_list %}">Demographic Questions</a></li>
+            {% endif %}
+            {% if perms.polls.poll_demographic %}
+            <li><a href="{% url poll_demo_list %}">Demographic Polls</a></li>
+            {% endif %}
+            {% if perms.django_quickblocks.quickblock_list %}
+            <li class="divider"></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}?slug=banner">Home Page Banners</a></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}?slug=home">Home Page Entries</a></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}?slug=campaign">Campaigns</a></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}?slug=blog">Blog Entries</a></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}?slug=about">About Entries</a></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}?slug=sidebar">Sidebar Entries</a></li>
+            <li><a href="{% url django_quickblocks.quickblock_list %}">All Content Items</a></li>
+            {% endif %}
+            {% if perms.django_quickblocks.quickblocktype_create %}
+            <li><a href="{% url django_quickblocks.quickblocktype_list %}">Content Types</a></li>
+            {% endif %}
+            {% if perms.auth.user_list %}
+            <li class="divider"></li>
+            <li><a href="{% url users.user_list %}">Users</a></li>
+            <li><a href="{% url console.message_list %}">Message Console</a></li>
+            {% endif %}
+            <li class="divider"></li>
+            <li><a href="{% url users.user_logout %}">Logout</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+

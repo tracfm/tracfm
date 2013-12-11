@@ -1,0 +1,9 @@
+*.pyc
+*.db
+*.sqlite*
+~*
+*~
+*.orig
+private
+*.log
+*.log.*

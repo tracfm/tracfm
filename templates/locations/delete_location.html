@@ -1,0 +1,20 @@
+{% extends "smartmin/delete_confirm.html" %}
+
+{% load smartmin %}
+
+{% block delete_form %}
+    <div style="margin-left:30px">
+
+    <div>
+        <input type="radio" style="float:left" name="delete_deep" value="keep_categories" checked>
+        <div style="margin-left:25px;">Keep existing categories and responses (but without location information)</div>
+    </div>
+
+    <div style="clear:both;margin-top:5px">
+        <input style="float:left" type="radio" name="delete_deep" value="delete">
+        <div style="margin-left:25px;">Delete all categories and responses associated with this location</div>
+    </div>
+
+    </div>
+{% endblock %}
+

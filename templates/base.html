@@ -1,0 +1,68 @@
+{% extends "frame.html" %}
+
+{% block title %}TRAC.fm{% endblock %}
+
+{% block styles %}
+{{ block.super }}
+{% endblock %}
+
+{% block navbar %}
+<div class="row" id="nav">
+
+  <div class="navbtn first span4">
+    <a href="/">
+      <div class="logo"><img src="{{STATIC_URL}}img/logo.png"/></div>
+      <div>
+        <div class="redstrip pull-left">&nbsp;</div>
+        <div class="textbtn">Amplify your voice<br/> through <strong>SMS</strong> and <strong>Radio</strong></div>
+      </div>
+    </a>
+  </div>
+
+  <div class="navbtn span2">
+    <a href="{% url polls %}">
+      <div class="logo"><h4>POLLS</h4></div>
+      <div>
+        <div class="redstrip pull-left">&nbsp;</div>
+        <div class="textbtn">All our<br/>past polls</div>
+      </div>
+    </a>
+  </div>
+  
+  <div class="navbtn span2">
+    <a href="{% url stories.story_list 'campaign' %}">
+      <div class="logo"><h4>CAMPAIGNS</h4></div>
+      <div>
+        <div class="redstrip pull-left">&nbsp;</div>
+        <div class="textbtn">Topical<br/>poll content</div>
+      </div>
+    </a>
+  </div>
+  
+  <div class="navbtn span2">
+    <a href="{% url stories.story_list 'blog' %}">
+      <div class="logo"><h4>BLOG</h4></div>
+      <div>
+        <div class="redstrip pull-left">&nbsp;</div>
+        <div class="textbtn">Hear the latest<br/>on TRAC</div>
+      </div>
+    </a>
+  </div>
+  
+  <div class="navbtn last span2">
+    <a href="{% url stories.story_list 'about' %}">
+      <div class="logo"><h4>ABOUT</h4></div>
+      <div>
+        <div class="redstrip pull-left">&nbsp;</div>
+        <div class="textbtn">Who we are<br/>and what we do</div>
+      </div>
+    </a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block footer %}
+<a href="http://www.nyaruka.com/"><div id="nyaruka_footer">&nbsp;</div></a>
+<a href="https://www.trac.pro{% url users.user_login %}"><div id="trac_footer"></div></a>
+{% endblock %}

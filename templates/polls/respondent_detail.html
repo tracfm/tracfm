@@ -1,0 +1,64 @@
+{% extends "smartmin/list.html" %}
+
+{% block extrascript %}
+    {{ super }}
+    <script>
+        $(document).ready(function() {
+            $(".demo_poll").tooltip();
+        });
+    </script>
+{% endblock %}
+
+
+{% block pre-content %}
+    <div class="well" style="margin-bottom:15px;padding-bottom: 15px">
+    <div id="respondent_number">{{ respondent.identity }}</div>
+    <h3>Respondent Report</h3>
+        
+    <div id="respondent_name">{{ respondent.name }}</div>
+    <div id="respondent_notes">{{ respondent.notes }}</div>
+        {% if demo_responses %}
+        {% endif %}
+        <div class="demo">
+            {% for response in question_responses %}
+            <div class="demo_poll">
+                {{response.question.question}}
+            </div>
+            <div></div>
+            <div class="demo_response">{{response.response}}</div>
+            {% endfor %}
+
+    {% for response in demo_responses %}
+            {% if forloop.last %}
+            {% endif %}
+
+            {% if response.category %}
+            <div class="demo_poll">
+                {{ response.poll.name }}
+            </div>
+            {%if response.poll.description|striptags|slugify %}
+            <div class="demo_description" style="display:none">{{ response.poll.description|safe }}</div>
+            {% else %}
+            <div></div>
+            {%endif%}
+            <div class="demo_response">{{ response.category }}</div>
+            {% endif %}
+
+
+        {% empty %}
+
+        <div class="demo">
+            <div class="demo_poll">No demographic data</div>
+            <div></div>
+            <div class="demo_response">This respondent does not have any demographic data yet.</div>
+        </div>
+
+    {% endfor %}
+        </div>
+    <br clear="both"/>
+
+    <div style="margin-left:0px;margin-right:15px;"><a class="btn" href="{% url respondent_edit respondent.id %}">Edit Demographic Data</a></div>
+    </div>
+
+
+{% endblock pre-content %}

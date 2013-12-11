@@ -1,0 +1,60 @@
+{% extends "smartmin/update.html" %}
+
+{% load smartmin %}
+
+{% block extra-style %}
+{{ block.super }}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/prettify.css"></link>
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}css/bootstrap-wysihtml5.css"></link>
+<style>
+#id_description {
+  width: 95%;
+  height: 250px;
+}
+</style>
+{% endblock %}
+
+{% block extra-script %}
+{{ block.super }}
+<script src="{{ STATIC_URL }}js/wysihtml5-0.4.0pre.min.js"></script>
+<script src="{{ STATIC_URL }}js/prettify.js"></script>
+<script src="{{ STATIC_URL }}js/bootstrap-wysihtml5.js"></script>
+
+<script>
+$(function(){
+  $("#id_description").wysihtml5({
+    color: true,
+    html: true,  
+    image: false,                             
+{% if user.is_superuser %}                            
+    html: true,
+{% else %}
+    html: false,
+{% endif %}
+    stylesheets: ["{{ STATIC_URL }}css/wysiwyg-color.css"], 
+  });
+});
+</script>
+<script>
+$(function(){
+  $("#id_categories").parent().parent().hide();
+  $("#id_template").change(function(){
+    if ($("#id_template option:selected").attr("value") == -1){
+      $("#id_categories").parent().parent().show();
+    } else {
+      $("#id_categories").parent().parent().hide();
+    }
+  });
+  
+  $("#id_secondary_categories").parent().parent().hide();
+  $("#id_secondary_template").change(function(){
+    if ($("#id_secondary_template option:selected").attr("value") == -1){
+      $("#id_secondary_categories").parent().parent().show();
+    } else {
+      $("#id_secondary_categories").parent().parent().hide();
+    }
+  });
+});
+</script>
+{% endblock %}
+

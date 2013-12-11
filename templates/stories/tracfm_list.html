@@ -1,0 +1,9 @@
+{% extends "stories/list.html" %}
+
+{% block sidebar %}
+{% if perms.django_quickblocks.quickblock_create %}
+<a class="btn btn-block" href="{% url django_quickblocks.quickblock_create %}?type={{story_type.id}}">Add</a>
+<br/>
+{% endif %}
+{% include "sidebar.html" %}
+{% endblock %}

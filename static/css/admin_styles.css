@@ -1,0 +1,68 @@
+
+#header {
+    background: url(../admin_tools/images/admin-tools.png) 0 0 repeat-x;
+}
+
+#header #branding h1 {
+    margin: 0;
+    padding: 5px 10px;
+    text-indent: -9999px;
+    background: transparent url(../img/tracfm_logo_small.png) 10px 5px no-repeat;
+    height: 31px;
+    width: 93px;
+}
+
+div.breadcrumbs {
+    display: block;
+    padding: 10px 15px;
+    border: 0;
+    background-position: 0 -8px;
+    border-bottom: 1px solid #ededed;
+}
+
+div.breadcrumbs a {
+    display: inline;
+}
+
+.dashboard #content {
+    width: 95%;
+}
+
+#content-related {
+    margin-right: 1em;
+}
+
+.right {
+    float: right;
+}
+
+div.created {
+    float: right;
+    font-size: 10px;
+}
+
+.graphs {
+
+}
+
+td.text {
+    width: 60%;
+}
+
+#content-nav {
+    padding: 0;
+    background-color: black;
+    height: 30px;
+}
+
+#content-nav li {
+    float: left;
+    cursor: pointer;
+    list-style: none;
+    padding-left: 10px;
+}
+
+#content-nav li a {
+    text-decoration: none;
+    font-size: 12pt;
+}

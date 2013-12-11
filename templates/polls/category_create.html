@@ -1,0 +1,26 @@
+{% extends "smartmin/update.html" %}
+
+
+{% load smartmin %}
+
+{% block pre-content %}
+
+{% include "polls/category_header.html" %}
+
+{% endblock %}
+
+{% block extrascript %}
+{% include "polls/catset_js.html" %}
+{% endblock extrascript %}
+
+{% block content %}
+    <div id="bottom">
+    {% block pjax %}
+        {{ block.super }}
+    {% endblock pjax%}
+    </div>
+{% endblock %}
+
+
+
+

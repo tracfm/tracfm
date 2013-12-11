@@ -1,0 +1,37 @@
+{% extends "smartmin/list.html" %}
+
+{% load smartmin %}
+
+{% block table-buttons %}
+<div class="pull-right">
+    {% if category %}
+    {% if category == "_" %}
+    <a class="btn btn-primary" href="{% url response_categorization poll.id '_' %}">Categorize</a>
+        {% else %}
+    <a class="btn btn-primary" href="{% url response_categorization poll.id category.id %}">Categorize</a>
+        {% endif %}
+        {% if category != "_" %}
+    <a class="btn" href="{% url poll_category_edit category.category_set.id category.id %}">Edit</a>
+      {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block pre-content %}
+{% if poll %}
+<div class="poll_info">
+  <h2><a href="{% url poll_view poll.id %}">{{  poll.name }}</a></h2>
+  <p>{{ poll.description|safe }}</p>
+</div>
+{% endif %}
+
+<div id="category_header">
+  {% if category.id %}
+  <div class="buttons right clearfix">
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+
+

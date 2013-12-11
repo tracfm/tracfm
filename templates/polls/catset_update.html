@@ -1,0 +1,7 @@
+{% extends "smartmin/update.html" %}
+
+{% load smartmin %}
+
+{% block table_header_buttons %}
+    <a href="{% url catset_delete pollcategoryset.id%}" class="btn btn-destructive">Remove</a>
+{% endblock %}

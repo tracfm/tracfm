@@ -1,0 +1,34 @@
+{% extends "smartmin/list.html" %}
+
+{% block pre-content %}
+<div style="height:42px">
+  <div class="page-menu">
+  {% include "menu.html" %}
+  </div>
+</div>
+<hr class="clearfix" />
+{% include "polls/category_header.html" %}
+
+{% endblock pre-content %}
+
+{% block extra-script %}
+  {{ block.super }}
+  {% include "polls/catset_js.html" %}
+{% endblock extra-script %}
+
+
+{% block content %}
+    <div id="bottom">
+    {% block pjax %}
+        {% load smartmin %}
+        {% load guardian_tags %}
+        {% get_obj_perms request.user for pollcategoryset as "poll_perms" %}
+        <div style="float:right;margin-top:3px;margin-right:8px;margin-bottom:5px;">
+            {% if "polls.pollcategoryset_update" in poll_perms or perms.polls.pollcategoryset_update %}
+          <a class="btn btn-primary btn-small" href="javascript:showAdd();">Add Category</a>
+            {% endif %}
+        </div>
+        {{ block.super }}
+    {% endblock pjax%}
+    </div>    
+{% endblock %}

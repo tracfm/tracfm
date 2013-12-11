@@ -1,0 +1,559 @@
+{% load smartmin guardian_tags compress %}
+{% get_obj_perms request.user for poll as "poll_perms" %}
+
+<html style="overflow:hidden;">
+
+  <head>
+  {% compress css %}
+  <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/smartmin_styles.css?v=2">
+  <link type="text/css" rel="stylesheet" href="{{ STATIC_URL }}css/tracfm.css?v=2">
+  <link type="text/css" href="{{STATIC_URL}}css/jplayer-black-and-red.css" rel="stylesheet" />
+  {% endcompress %}
+
+   <style type="text/css">
+   html {
+     background: none;
+   }
+   .clip {
+       margin-top:5px;
+       display:none;
+   }
+
+   .clip_link a {
+       color: #666;
+       text-shadow: 0px 1px 1px rgba(255,255,255,0.5);
+   }
+   .clip_link {
+       padding:5px;
+       width:60px;
+       height:15px;
+       background: rgb(198, 199, 200) url(jplayer-black-and-red.png) 0 -210px;
+       -webkit-box-shadow: 0 1px 1px rgba(0,0,0,0.5);
+       -moz-box-shadow: 0 1px 1px rgba(0,0,0,0.5);
+       box-shadow: 0 1px 1px rgba(0,0,0,0.5);
+
+       -webkit-border-radius: 3px;
+       -moz-border-radius: 3px;
+       border-radius: 3px;
+   }
+
+   #bar {
+      width: {{graph_width}}px;
+      height: {{graph_height}}px;
+   }
+
+   #map_canvas {
+      width: {{graph_width}}px;
+   }
+
+   body {
+      width: 100%;
+      padding: 5px;
+      margin: 0px;
+   }
+
+   html {
+      overflow: hidden;
+   }
+
+   h2 {
+     font-size: 1.2em;
+     margin-right: 5px;
+   }
+   </style>
+
+  <!-- All JavaScript at the bottom, except for Modernizr which enables HTML5 elements & feature detects -->
+  <script>
+  if (window.location.hostname == "localhost"){
+    document.write(unescape('%3Cscript src="{{ STATIC_URL }}js/jquery-1.8.2.min.js"%3E%3C/script%3E'));
+  } else {
+    document.write(unescape('%3Cscript src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"%3E%3C/script%3E'));
+  }
+  </script>
+
+{% if poll.has_locations %}
+<script src="//maps.google.com/maps/api/js?sensor=false&key=AIzaSyDFLwxEdIzZb6xEWH9qAl7w_X_Hkz0rvNI" type="text/javascript"></script>
+{% compress js %}
+<script language="javascript" src="{{ STATIC_URL }}js/maps.google.circleoverlay.js"></script>
+<script language="javascript" src="{{ STATIC_URL }}js/maps.google.infobubble.js"></script>
+<script language="javascript" src="{{ STATIC_URL }}js/maps.js"></script>
+{% endcompress %}
+{% endif %}
+
+<script language="javascript" type="text/javascript" src="{{ STATIC_URL }}js/highcharts.js"></script>
+<script>
+var cat_data, car_chart;
+var time_data, time_chart;
+var colors;
+var total_count = {{ poll.count }};
+var unknown_count = {{ poll.unknown_count }};
+
+function updateCounts(category, name, value, color, pct, triggerMap){
+
+  $("#cat_value").css("color", color);
+  $("#cat_value").text(value);
+  $("#cat_name").css("color", color);
+  $("#cat_name").text(name);
+
+  $("#cat_percent").text(pct);
+  $("#cat_percent").css("color", color);
+  $(".percent").css("color", color);
+  $(".percent").text("%");
+  $("#chart_roll").stop(true, true).fadeIn(250);
+
+  {% if poll.has_locations %}
+      if (triggerMap) {
+          showMapInfo(category);
+      }
+  {% endif %}
+}
+
+function clearCounts(evt) {
+  $("#chart_roll").stop(true,true).fadeOut(250);
+}
+
+function showCategory(event){
+    {% if not user.is_anonymous %}
+    document.location = event.point.href;
+    {% endif %}
+}
+
+function buildSeries(secondary_id, color) {
+    series = [];
+    for (var i=0; i<cat_data.length; i++) {
+        point = {};
+        point.href = "/polls/responses/{{poll.id}}/" + cat_data[i].id + "/";
+
+        if (color) {
+            point.color = color;
+        } else if (cat_data[i].color) {
+            point.color = cat_data[i].color;
+        } else {
+            point.color = colors[series.length % colors.length];
+        }
+
+        if (cat_data[i].name == "Unknown") point.color = "#aaa";
+
+        if (secondary_id != null && cat_data[i].secondary_counts) {
+            point.y = cat_data[i].secondary_counts[secondary_id]['count'];
+            point.pct = cat_data[i].secondary_counts[secondary_id]['pct'];
+            point.name = cat_data[i].name + " - " + cat_data[i].secondary_counts[secondary_id]['name']
+        } else {
+            if (secondary_id) {
+                continue;
+            }
+            point.y = cat_data[i]['count'];
+            point.name = cat_data[i].name;
+            point.pct =  Math.round((point.y * 100 / total_count));
+        }
+
+        series[series.length] = point;
+    }
+
+    return series
+}
+
+// given a JSON version of our page, builds up our cat_data variable and returns
+// it.  It is up to the caller to assign 
+function buildCategoryData(json){
+  var new_cat_data = [];
+  var categories = json.categories;
+  for (i=0; i<categories.length; i++){
+    if (categories[i].count > 0){
+      var category = {};
+      category.id = categories[i].id;
+      category.name = categories[i].name;
+      category.count = categories[i].count;
+      category.secondary_counts = categories[i].secondary_counts;
+
+      category.html = "<div class='category'>";
+      category.html += "<a href='/polls/responses/{{poll.id}}/" + categories[i].id + "/'>";
+      category.html += categories[i].name + "</a></div>";
+      category.color = colors[i % colors.length];
+
+      {% if poll.secondary_category_set %}
+
+          category.html += "<div class=summary>" + categories[i].count + " of {{ poll.count }} responses</div>";
+
+          category.color = colors[0];
+          var j=0;
+          var topCat = 0;
+          for (index in json.secondary_categories) {
+
+              var secondary = categories[i].secondary_counts[json.secondary_categories[index].id];
+
+              var cat_color = colors[j++ % colors.length];
+
+              if (secondary.pct > topCat) {
+                  category.color = cat_color;
+                  topCat = secondary.pct;
+              }
+
+              var name = secondary.name;
+              if (name.length > 40) {
+                  name = name.substring(0, 40) + "..";
+              }
+
+              category.html += "<div class='sub_category'><div style='background-color:" + cat_color + "' class='amount'>";
+              category.html += secondary.pct + "%</div><div class='name'>";
+              category.html += name + "</div></div>";
+          }
+
+      {% else %}
+
+          category.html += "<div style=height:5px>&nbsp;</div>";
+
+          var description = "<span style='font-size:26px;'>" + Math.round((categories[i].count / {{ poll.count }}) * 100) + "<small>%</small></span>";
+          category.color = colors[new_cat_data.length % colors.length];
+
+          category.html += "<div class='sub_category'><div style='background-color:" + colors[i % colors.length] + "' class='amount'>";
+          category.html += Math.round((categories[i].count / {{ poll.count }}) * 100) + "%</div><div class='name'>" + categories[i].count + " of {{ poll.count }} responses";
+          category.html += "</div></div>";
+
+      {% endif %}
+
+      if (categories[i].location) {
+          category.latlng = new google.maps.LatLng(categories[i].location.lat, categories[i].location.lng);
+      }
+    
+      category.href = "/polls/responses/{{poll.id}}/" + categories[i].id + "/";
+      new_cat_data[new_cat_data.length] = category
+    }
+  }
+ 
+  // sort it by number of items
+  new_cat_data.sort(function(a,b) { return b.count - a.count });
+
+  {% if not poll.demographic %}
+  if (json.unknown_count > 0) {
+    category = {};
+    category.name = "Unknown";
+    category.y = json.unknown_count;
+    category.count = json.unknown_count;
+    category.color = '#aaa';
+    category.id = "_";
+    category.href = "/polls/responses/{{poll.id}}/_/";
+    new_cat_data[new_cat_data.length] = category;
+
+  }
+  {% endif %}
+
+  return new_cat_data;
+}
+
+var page_data = {% view_as_json %};
+
+$(".clip_link").live("click", function(){
+    $(".clip").fadeIn();
+    $(this).hide();
+});
+
+$(document).ready(function(){
+
+    {% if poll.audio_file %}
+    $("#jquery_jplayer_1").jPlayer({
+        ready: function () {
+            $(this).jPlayer("setMedia", {
+                mp3:"{{poll.audio_file}}"
+            });
+        },
+        ended: function (event) {
+            /// $(this).jPlayer("play");
+        },
+        swfPath: "/js",
+        supplied: "mp3",
+        wmode: "window"
+
+    });
+    {% endif %}
+
+    colors = Highcharts.getOptions().colors;
+
+    setRecentMessages(page_data);
+
+    // Create mapping data
+    cat_data = buildCategoryData(page_data);
+
+    // set our categories
+    var categories = [];
+    for (i=0; i<cat_data.length; i++){
+       categories[i] = cat_data[i].name;
+    }
+
+    // bar chart is always 450
+    var height = {{ graph_height }};
+    $("#bar").height(height);
+
+    cat_chart = new Highcharts.Chart({
+         credits: { enabled: false },
+         title: { text: null },
+         chart: {
+            renderTo: 'bar',
+            defaultSeriesType: 'bar'
+         },
+         xAxis: {
+           categories: categories
+         },
+         yAxis: {
+           title: { text: null },
+           allowDecimals: false,
+           min: 0
+         },
+         series: [
+             {% if poll.secondary_category_set%}
+                 {% for sc in poll.secondary_categories.all %}
+                 { name: '{{ sc.name }}', data: buildSeries({{ sc.id }}, colors[{{ forloop.counter0 }}]), events: { click: showCategory , mouseOut: clearCounts} } {% if not forloop.last %},{% endif %}
+                 {% endfor %}
+             {% else %}
+                 { name: 'Total', data: buildSeries(), events: { click: showCategory, mouseOut: clearCounts } }
+             {% endif %}
+         ],
+         plotOptions: {
+           bar: {
+            {% if poll.detailed_chart and not poll.secondary_category_set %}
+              dataLabels: {
+                align: "right",
+                enabled: true,
+                color: "#666666",
+                x: 30,
+                formatter: function() {
+                  return this.point.pct + "%";
+                }
+              },
+            {% endif %}
+            stacking: 'normal'
+           }
+         },
+         tooltip: {
+           formatter: function() {
+             {% if poll.secondary_category_set%}
+             return '<b>' + this.x + '</b><br/>' + 
+                    '<b>'+ this.series.name +'</b><br/>'+
+                    this.y + " - " + this.point.pct + "%";
+             {% else %}
+             return '<b>'+ this.x +'</b><br/>'+
+                     this.y + " - " + this.point.pct + "%";
+             {% endif %}
+             }
+         },
+         {% if poll.secondary_category_set %}
+         legend: {
+           layout: 'horizontal',
+           align: 'center',
+           verticalAlign: 'bottom',
+           floating: false,
+           borderWidth: 1,
+           y: -12,
+           backgroundColor: '#FFFFFF'
+         },
+         {% else %}
+           legend: { enabled: false }
+         {% endif %}
+    });
+
+    if ($("#map_canvas").length > 0) {
+        createOverlayMap(cat_data, {{ poll.unknown_count }});
+        $("#map_canvas").show();
+    }
+});
+
+
+function setCategoryData(json){
+  new_cat_data = buildCategoryData(json);                           
+
+  // see if everything is the same, we'll shortcut out if so
+  if (cat_data.length == new_cat_data.length){
+      var all_same = true;
+      for (i=0; i<cat_data.length; i++){
+        var cat = cat_data[i];
+        var new_cat = new_cat_data[i];
+
+        var location_diff = (cat.location != null && new_cat.location == null) ||
+                            (cat.location == null && new_cat.location != null);
+
+        if (!location_diff && cat.location){
+          location_diff = (cat.location.lat != new_cat.location.lat || cat.location.lng != new_cat.location.lng);
+        }
+
+        if (cat.id != new_cat.id ||
+              cat.name != new_cat.name ||
+              cat.count != new_cat.count ||
+              location_diff){
+          all_same = false;
+          break;
+        }
+
+        if (cat.secondary_counts && new_cat.secondary_counts) {
+            if (cat.secondary_counts.length != new_cat.secondary_counts.length) {
+                all_same = false;
+                break;
+            }
+
+            for (var j=0; j<cat.secondary_counts.length; j++) {
+                var sc = cat.secondary_counts[j];
+                var new_sc = new_cat.secondary_counts[j];
+
+                if (sc.id != new_sc.id || sc.name != new_sc.name || sc.count != new_sc.count) {
+                    all_same = false;
+                    break;
+                }
+            }
+        }
+      }
+      // don't do anything, nothing has changed
+      if (all_same){
+        return;
+      }
+  }
+
+  // assign everything
+  cat_data = new_cat_data;
+
+  categories = [];
+  for (i=0; i<cat_data.length; i++){
+     categories[i] = cat_data[i].name;
+  }
+
+  // set our categories
+  {% if poll.secondary_category_set %}
+      {% for sc in poll.secondary_categories.all %}
+          cat_chart.series[{{ forloop.counter0 }}].setData(buildSeries({{ sc.id }}, colors[{{ forloop.counter0 }}]), true);
+      {% endfor %}
+  {% else %}
+      cat_chart.series[0].setData(buildSeries(), true);
+  {% endif %}
+
+
+  cat_chart.xAxis[0].setCategories(categories, true);
+
+  // update our map
+  updateMap(cat_data, true);
+
+  // set no responses
+  setNoResponses(json);
+  setRecentMessages(json);
+}
+
+function setRecentMessages(data) {
+
+    $(".appended_row").remove();
+
+    for (i in data.responses) {
+        var response = data.responses[i];
+
+        if (response) {
+
+            var row = $("#message").clone().removeAttr('style').removeAttr("id");
+            row.attr('class', 'appended_row row' + (i % 2));
+            $(".recent_sent", row).text(response.sent);
+            $(".recent_text", row).text(response.text);
+            $(".recent_category", row).text(response.category);
+            {% if poll.secondary_category_set %}
+            $(".recent_secondary_category", row).text(response.secondary);
+            {% endif %}
+            row.insertBefore("#message");
+        }
+    }
+}
+
+
+function setNoResponses(data){
+  var names = [];
+  for (i in data.categories){
+    if (data.categories[i].count == 0){
+      names[names.length] = data.categories[i].name;
+    }
+  }
+
+  if (names.length > 0){
+    $("#no_response_count").text(names.length);
+    $("#no_responses").text("No responses yet: " + names.join(", "));
+  } else {
+    $("#no_responses").text("");
+  }
+}
+
+function setData(data){
+  total_count = data.count;
+  total_unknown_count = data.unknown_count;
+
+  setCategoryData(data);
+
+  $("#total_count").text(total_count);
+    {% if not poll.demographic %}
+    $("#unknown_count").text(total_unknown_count);
+    {% endif %}
+}
+
+function refreshData(){
+  // get our new data
+  $.ajax({ url: document.location.href, data: { _format: "json" }, dataType: "json" })
+     .success(function(data, status){
+        setData(data);
+        // schedule our next refresh if this poll is active
+        if (data.active){
+          setTimeout(refreshData, 15000);
+        }
+  });
+}
+
+{% if poll.active %}
+
+// we refresh every 15 seconds
+$(document).ready(function(){
+  setTimeout(refreshData, 15000);
+});
+
+{% endif %}
+
+function showEmpties() {
+    $("#empty_message").hide();
+    $("#empty_category_names").show(250);
+}
+
+
+</script>
+</head>
+<body>
+
+<h2>{{ poll.name }}</h2>
+
+{% if poll.started or poll.demographic %}
+<div class="charts">
+
+  <div id="bar">
+  </div>
+
+  <div id="no_responses_sectuib" class="location_rules">
+  {% if poll.category_set.get_empty_categories.count > 0 %}
+    {% if poll.category_set.get_empty_categories.count > 10 %}
+      <div id="empty_message">No responses yet for <a href="javascript:showEmpties();"><span id="no_response_count">{{ poll.category_set.get_empty_categories.count }}</span> categories</a>.</div>
+      <div id="empty_category_names" style="display:none">
+    {% else %}
+      <div id="empty_message"></div>
+      <div id="empty_category_names"></div>
+    {% endif %}
+    <div id="no_responses">No responses for: 
+    {% for category in poll.category_set.get_empty_categories %}
+      {% if category.count == 0 and category.name %}{{ category.name }}{% if not forloop.last %}, {% endif %}{% endif %}
+    {% endfor %}
+    </div>
+  {% endif %}
+  </div>
+
+  <div style="margin-top: 5px;color:#333;>
+    <span id="total_count">{{ poll.count }}</span> total responses
+  </div>
+</div>
+<div class="clearfix"></div>
+
+{% if poll.has_locations %}
+  <div id="map_canvas"></div>
+{% endif %}
+
+{% endif %}
+</div>
+</div>
+</body>
+</html>
+

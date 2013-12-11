@@ -1,0 +1,6 @@
+{% extends "polls/poll_create.html" %}
+
+{% block table_header_buttons %}
+    <a href="{% url poll_delete poll.id%}" class="btn btn-danger">Remove</a>
+{% endblock %}
+

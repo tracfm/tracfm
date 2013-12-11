@@ -1,0 +1,12 @@
+{% extends "polls/category_create.html" %}
+
+{% load smartmin %}
+{% block table_header_buttons %}
+    {% if pollcategory.category_set.poll %}
+        <a href="{% url poll_category_delete pollcategory.category_set.id pollcategory.pk %}" class="btn btn-danger">Remove</a>
+    {% else %}
+        <a href="{% url category_delete pollcategory.category_set.id pollcategory.pk %}" class="btn btn-danger">Remove</a>
+    {% endif %}
+{% endblock %}
+
+

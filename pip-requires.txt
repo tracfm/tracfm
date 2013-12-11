@@ -1,0 +1,23 @@
+django-authority
+-e git+https://github.com/robhudson/django-debug-toolbar.git#egg=django-debug-toolbar
+-e git+https://github.com/nyaruka/rapidsms-httprouter.git#egg=rapidsms_httprouter
+-e git+https://github.com/nyaruka/django-quickblocks.git#egg=django_quickblocks
+-e git+https://github.com/nyaruka/smartmin.git#egg=smartmin
+-e git+https://github.com/nyaruka/nsms.git#egg=nsms
+-e git+ssh://git@github.com/nyaruka/nsms-plus.git#egg=nsms_plus
+django-guardian
+django-mptt
+Markdown
+sorl-thumbnail==11.01
+django-nose
+coverage
+south
+gunicorn
+raven
+celery==2.4.4
+django_compressor==1.2
+django-celery==2.4.2
+redis==2.7.1
+django==1.4.1
+django-redis==3.1.5
+

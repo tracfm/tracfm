@@ -1,0 +1,27 @@
+from settings_common import *
+
+DEBUG=True
+TEMPLATE_DEBUG=True
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3', # Add 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
+        'NAME': 'tracfm.db',                      # Or path to database file if using sqlite3.
+        'USER': '',                      # Not used with sqlite3.
+        'PASSWORD': '',                  # Not used with sqlite3.
+        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    }
+}
+
+# Our test runner
+INSTALLED_APPS = INSTALLED_APPS + ('django_nose', )
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+NOSE_ARGS = ['--match=^test', '--cover-html-dir=../coverage-report', '--cover-html']
+SOUTH_TESTS_MIGRATE=False
+SKIP_SOUTH_TESTS=True
+
+# Add debug toolbar
+# INSTALLED_APPS = INSTALLED_APPS + ('debug_toolbar', )
+# MIDDLEWARE_CLASSES = MIDDLEWARE_CLASSES + ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+

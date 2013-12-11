@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% load thumbnail quickblocks %}
+
+{% block content %}
+<div class="row">
+  <div class="span8">
+    <div class="campaign_list">
+      {% for campaign in object_list %}
+      <div class="campaign">
+        <div class="preview_image">
+        {% thumbnail campaign.feature_image.image "100x100" crop="33%" as im %}
+          <a href="{%url campaigns.campaign_read campaign.pk %}">
+            <img border="0" src={{im.url}} width={{im.width}} height={{im.height}}/>
+          </a>
+        {% endthumbnail %}
+        </div>
+        <div class="campaign_name tall"><a href="{%url campaigns.campaign_read campaign.pk %}">{{campaign.name}}</a></div>
+        <div class="campaign_description">{{campaign.description}}</div>
+        <div class="clearfix"></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="span4">
+    {% if perms.campaigns.campaign_create %}
+    <a class="btn btn-block" style="margin-bottom:5px" href="{% url campaigns.campaign_create %}">Add Campaign</a>
+    {% endif %}
+    {% include "sidebar.html" %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra-style%}
+<style>
+    .preview_image {
+        float:left
+    }
+    .campaign {
+      padding-bottom: 15px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    .campaign_name {
+        margin-left:115px;
+        margin-bottom:5px;
+        color: #333;
+    }
+
+    .campaign_name a {
+        color: #333;
+    }
+    .campaign_description {
+        margin-left:115px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+        
+{% block extra-script %}
+<script type="text/javascript" charset="utf-8">
+  var thumbslider;
+
+  $(function() {
+    $('#slides').flexslider({
+      animation: "slide",
+      controlNav: true,
+      before: function(slider){
+        var current = slider.currentSlide;
+        var goingTo = slider.animatingTo;
+        if (slider.count > 4){
+          thumbslider.flexAnimate(goingTo);
+        }
+        $(thumbslider.slides[current]).removeClass("flex-active-slide");
+        $(thumbslider.slides[goingTo]).addClass("flex-active-slide");
+      }
+    });
+
+    $('#thumbnails').flexslider({
+      animation: "slide",
+      slideshow: false,
+      controlNav: false,
+      directionNav: true,
+      animationLoop: false,
+      itemWidth: 200,
+      asNavFor: '#slides',
+      start: function(slider){ thumbslider = slider; }
+    });
+});
+</script>
+{% endblock %}

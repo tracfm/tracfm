@@ -1,0 +1,216 @@
+{% extends "smartmin/list.html" %}
+
+{% block extra-script %}
+<script>
+
+$(document).ready(function() {
+
+    {% if show_create %}showCreate();{% endif %}
+
+    {% if poll.secondary_category_set %}
+    var secondary = $("#id_secondary_category");
+    var no_secondary_option = $("#id_secondary_category option:first");
+    no_secondary_option.remove();
+    no_secondary_option.text("None");
+    no_secondary_option.attr("selected", "");
+    secondary.append(no_secondary_option);
+    {% endif %}
+
+    var select = $("#id_category");
+    var unknown = $("#id_category option:first");
+
+    // remove our None category and tweak it
+    unknown.remove();
+    unknown.text("Unknown")
+    unknown.attr("selected", "");
+
+    // add special case options to the end
+    select.append(unknown);
+    select.append('<option value=-1>New Category</option>');
+
+    // on selection, we need to potentially show the new category form
+    select.change(function() {
+        if ($(this).attr("value") == -1) {
+            showCreate();
+        }
+    })
+
+    $("input.response").click(function() {
+        var checkbox = $(this);
+        var rule = checkbox.attr("rule");
+
+        var rules = $("#id_update_rules").val().split("\n");
+
+        // add in rules on the new category form in case there are changes there
+        var new_category_rules = $("#id_new_rules").val().split("\n");
+        for (var idx in new_category_rules) {
+            var found = false;
+            for (var r in rules) {
+                if (rules[r] == new_category_rules[idx]) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                rules[rules.length] = new_category_rules[idx];
+            }
+        }
+
+        var newRules = "";
+        var exists = false;
+        for (var idx in rules) {
+            // if it's not the checkbox in question, add it
+            if (rules[idx] != rule && rules[idx].trim() != "") {
+                newRules += rules[idx].trim() + "\n";
+            }
+        }
+
+        // if it's checked let's add it
+        if (checkbox.attr("checked") && !exists){
+            newRules += rule;
+        }
+
+        $("#id_update_rules").val(newRules);
+        $("#id_new_rules").val(newRules);
+    });
+
+    // our forms share the same response checkboxes
+    $("form").submit(function(evt) {
+        var form = $(this);
+        var count = 0;
+        $("input.response:checked").each(function(){
+            form.append($(this).clone().attr("type", "hidden"));
+            count++;
+        });
+
+        if (count == 0) {
+            console.log(evt);
+            alert("Select at least one response to categorize.");
+            evt.preventDefault();
+        }
+    });
+
+    // our category selctor
+    $(".category_select").change(function() {
+        document.location = $(this).attr("value");
+    })
+});
+
+function showCreate() {
+    $("#category_form").show();
+    $("#categorization_form").hide();
+
+}
+</script>
+{% endblock %}
+
+
+{% block pre-content %}
+{% if poll %}
+<div class="poll_info">
+  <h2><a href="{% url poll_view poll.id %}">{{  poll.name }}</a></h2>
+  <p>{{ poll.description|safe }}</p>
+</div>
+
+<div style="margin-top:15px">
+Categorize responses for <select class="category_select">
+{% for cat in categories %}
+    <option value="{% url response_categorization poll.id cat.id %}" {% if cat == category %}selected{% endif %}>{{ cat }}</option>
+{%  endfor %}
+    <option value="{% url response_categorization poll.id "_" %}" {% if category == '_' %}selected{% endif %}>Unknown</option>
+</select>
+
+    <!--
+        I think having an edit link here is confusing
+        {% if category.id %}
+            {% if category != "_" %}
+                <a class="button small" href="{% url category_edit category.category_set.id category.id %}">Edit</a>
+            {% endif %}
+        {% endif %}
+    -->
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+  {% if not object_list %}
+<div style="margin-top:15px">
+  No responses to categorize, select a different category.
+</div>
+
+    {% else %}
+<div style="margin-top:15px">
+
+    <div style="float:left;width:350px" class="response_buttons">
+        {% for resp in object_list %}
+            <div class="clearfix" style="margin-bottom:5px">
+                <input name="responses" {% if resp.id|addslashes in checked %}checked{% endif %} style="float:left;margin-top:3px" class="response" type="checkbox" value="{{ resp.id }}" rule="{{ resp.text }}"/>
+                <div style="margin-left:20px;">{{ resp.text }} {% if poll.secondary_category_set %}<small> - {{ resp.secondary_category }}</small>{% endif %}</div>
+            </div>
+        {% endfor %}
+
+        {% if not paginator or paginator.num_pages <= 1 %}
+        <div class="not_paginated" style="border-top:1px solid #ccc;padding-top:5px">
+        {{ object_list|length }} result{% if object_list|length == 0 or object_list|length > 1 %}s{% endif %}
+        </div>
+        {% else %}
+        <div class="paging" style="margin-top: 20px">
+          Results {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ paginator.count }}
+          <div class="pagination">
+            <ul>
+              {% if page_obj.has_previous %}
+              <li>
+                <a href="{{url_params|safe}}page={{page_obj.previous_page_number}}">&laquo;</a>
+              </li>
+              {% endif %}
+
+              {% for page_num in paginator.page_range %}
+                {% if page_num < 8 %}
+                  {% if not page_num == page_obj.number %}
+                  <li><a href="{{url_params|safe}}page={{page_num}}">{{ page_num }}</a></li>
+                  {% else %}
+                  <li class="active"><a href="#">{{ page_num }}</a></li>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+
+              {% if page_obj.has_next %}
+              <li><a href="{{url_params|safe}}page={{page_obj.next_page_number}}">&raquo;</a></li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div id="forms" style="margin-left:385px">
+        <div id="categorization_form">
+            <form method="POST">
+                {% csrf_token %}
+                {{ categorization_form.as_p }}
+                <input type="hidden" name="form" value="categorization"/>
+                <input type="submit" class="btn btn-primary" value="Move Responses">
+            </form>
+        </div>
+
+        <div id="category_form">
+            <h3>Create New Category</h3>
+            <form method="POST">
+                {% csrf_token %}
+                {{ category_form.as_p }}
+                <input type="hidden" name="form" value="new_category"/>
+                <input type="submit" class="btn btn-primary" value="Create Category">
+            </form>
+        </div>
+    </div>
+
+    <div class="clearfix"></div>
+
+    </div>
+    {% endif %}
+
+
+{% endblock %}
